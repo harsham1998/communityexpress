@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import { LineChart, BarChart } from 'react-native-chart-kit';
+// Removed heavy chart library for better performance
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
@@ -38,24 +38,41 @@ const DashboardScreen = ({ navigation }: any) => {
     }
   }, [authLoading, user]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
-      const [statsData, communitiesData, trendsData] = await Promise.all([
-        DashboardService.getMasterDashboardStats(),
-        DashboardService.getCommunityStats(),
-        DashboardService.getOrderTrends(7),
-      ]);
-
+      setLoading(true);
+      
+      // Start with the most critical API call
+      const statsPromise = DashboardService.getMasterDashboardStats();
+      
+      // Show loading immediately, then load stats
+      const statsData = await statsPromise;
       setStats(statsData);
-      setCommunities(communitiesData);
-      setOrderTrends(trendsData);
+      setLoading(false); // Show UI immediately after stats
+      
+      // Load remaining data without blocking UI
+      const communitiesPromise = DashboardService.getCommunityStats();
+      const trendsPromise = DashboardService.getOrderTrends(7);
+      
+      // Load these in background
+      try {
+        const [communitiesData, trendsData] = await Promise.all([
+          communitiesPromise,
+          trendsPromise,
+        ]);
+        setCommunities(communitiesData);
+        setOrderTrends(trendsData);
+      } catch (secondaryError) {
+        console.warn('Secondary data loading failed:', secondaryError);
+        // Don't fail the whole dashboard if secondary data fails
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-    } finally {
       setLoading(false);
+    } finally {
       setRefreshing(false);
     }
-  };
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -83,15 +100,15 @@ const DashboardScreen = ({ navigation }: any) => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = useCallback((amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
     }).format(amount);
-  };
+  }, []);
 
-  const StatCard = ({ 
+  const StatCard = React.memo(({ 
     title, 
     value, 
     icon, 
@@ -114,31 +131,54 @@ const DashboardScreen = ({ navigation }: any) => {
       <Text style={styles.statTitle}>{title}</Text>
       {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
     </Card>
-  );
+  ));
 
-  const chartConfig = {
-    backgroundColor: theme.colors.white,
-    backgroundGradientFrom: theme.colors.white,
-    backgroundGradientTo: theme.colors.white,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(14, 165, 233, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-    style: {
-      borderRadius: theme.radius.lg,
-    },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: theme.colors.primary[600],
-    },
-  };
+  // Simple chart visualization using bars
+  const SimpleChart = React.memo(() => {
+    if (!orderTrends.length) {
+      return (
+        <View style={styles.chartPlaceholder}>
+          <Text style={styles.chartPlaceholderText}>Loading trends...</Text>
+        </View>
+      );
+    }
+
+    const maxOrders = Math.max(...orderTrends.map(t => t.orders));
+    
+    return (
+      <View style={styles.simpleChart}>
+        {orderTrends.map((trend, index) => {
+          const height = maxOrders > 0 ? (trend.orders / maxOrders) * 100 : 0;
+          const date = new Date(trend.date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          });
+          
+          return (
+            <View key={index} style={styles.chartBar}>
+              <View style={styles.chartBarContainer}>
+                <View 
+                  style={[
+                    styles.chartBarFill, 
+                    { height: `${height}%` }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.chartBarLabel}>{date}</Text>
+              <Text style={styles.chartBarValue}>{trend.orders}</Text>
+            </View>
+          );
+        })}
+      </View>
+    );
+  });
 
   if (loading || !stats) {
     return (
       <View style={styles.container}>
         <Header title="Master Dashboard" subtitle="Platform Overview" />
         <View style={styles.loadingContainer}>
-          <Text>Loading dashboard...</Text>
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
       </View>
     );
@@ -226,24 +266,7 @@ const DashboardScreen = ({ navigation }: any) => {
         {/* Order Trends Chart */}
         <Card style={styles.chartCard} padding={5}>
           <Text style={styles.chartTitle}>Order Trends (Last 7 Days)</Text>
-          <LineChart
-            data={{
-              labels: orderTrends.map(trend => 
-                new Date(trend.date).toLocaleDateString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric' 
-                })
-              ),
-              datasets: [{
-                data: orderTrends.map(trend => trend.orders),
-              }],
-            }}
-            width={screenWidth - 60}
-            height={200}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
+          <SimpleChart />
         </Card>
 
         {/* Top Communities */}
@@ -255,24 +278,30 @@ const DashboardScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
           
-          {communities.slice(0, 4).map((community, index) => (
-            <View key={community.communityId} style={styles.communityItem}>
-              <View style={styles.communityInfo}>
-                <Text style={styles.communityName}>{community.communityName}</Text>
-                <Text style={styles.communityStats}>
-                  {community.vendorCount} vendors • {community.userCount} users
-                </Text>
-              </View>
-              <View style={styles.communityRevenue}>
-                <Text style={styles.communityRevenueValue}>
-                  {formatCurrency(community.revenue)}
-                </Text>
-                <View style={styles.communityRank}>
-                  <Text style={styles.communityRankText}>#{index + 1}</Text>
+          {communities.length > 0 ? (
+            communities.slice(0, 4).map((community, index) => (
+              <View key={community.communityId} style={styles.communityItem}>
+                <View style={styles.communityInfo}>
+                  <Text style={styles.communityName}>{community.communityName}</Text>
+                  <Text style={styles.communityStats}>
+                    {community.vendorCount} vendors • {community.userCount} users
+                  </Text>
+                </View>
+                <View style={styles.communityRevenue}>
+                  <Text style={styles.communityRevenueValue}>
+                    {formatCurrency(community.revenue)}
+                  </Text>
+                  <View style={styles.communityRank}>
+                    <Text style={styles.communityRankText}>#{index + 1}</Text>
+                  </View>
                 </View>
               </View>
+            ))
+          ) : (
+            <View style={styles.communitiesPlaceholder}>
+              <Text style={styles.communitiesPlaceholderText}>Loading communities...</Text>
             </View>
-          ))}
+          )}
         </Card>
 
         {/* Quick Actions */}
@@ -350,6 +379,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  loadingText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
+  },
+
+  chartPlaceholder: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.radius.lg,
+    marginVertical: theme.spacing[2],
+  },
+
+  chartPlaceholderText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+  },
+
+  communitiesPlaceholder: {
+    paddingVertical: theme.spacing[6],
+    alignItems: 'center',
+  },
+
+  communitiesPlaceholderText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
   },
   
   statsGrid: {
@@ -486,6 +544,50 @@ const styles = StyleSheet.create({
   chart: {
     marginVertical: theme.spacing[2],
     borderRadius: theme.radius.lg,
+  },
+
+  simpleChart: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: 120,
+    paddingHorizontal: theme.spacing[2],
+    marginVertical: theme.spacing[4],
+  },
+
+  chartBar: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: theme.spacing[1],
+  },
+
+  chartBarContainer: {
+    height: 80,
+    width: 20,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.radius.sm,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+
+  chartBarFill: {
+    width: '100%',
+    backgroundColor: theme.colors.primary[500],
+    borderRadius: theme.radius.sm,
+  },
+
+  chartBarLabel: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing[1],
+    textAlign: 'center',
+  },
+
+  chartBarValue: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.primary,
+    fontWeight: theme.typography.fontWeight.medium as any,
+    marginTop: theme.spacing[1],
   },
   
   communitiesCard: {
