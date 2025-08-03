@@ -1,4 +1,5 @@
 import ApiService from './api';
+import { API_CONFIG } from '../config/api';
 import { CommunitiesService, CommunityStats } from './communities';
 import { VendorsService, VendorStats } from './vendors';
 
@@ -31,7 +32,7 @@ export interface RecentActivity {
 export class DashboardService {
   static async getMasterDashboardStats(): Promise<DashboardStats> {
     try {
-      const response = await ApiService.get<DashboardStats>('/dashboard/stats');
+      const response = await ApiService.get<DashboardStats>(`${API_CONFIG.ENDPOINTS.DASHBOARD}stats`);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -62,7 +63,7 @@ export class DashboardService {
 
   static async getOrderTrends(days: number = 7): Promise<OrderTrend[]> {
     try {
-      const response = await ApiService.get<OrderTrend[]>(`/dashboard/order-trends?days=${days}`);
+      const response = await ApiService.get<OrderTrend[]>(`${API_CONFIG.ENDPOINTS.DASHBOARD}order-trends?days=${days}`);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -75,7 +76,7 @@ export class DashboardService {
 
   static async getRecentActivities(): Promise<RecentActivity[]> {
     try {
-      const response = await ApiService.get<RecentActivity[]>('/dashboard/recent-activities');
+      const response = await ApiService.get<RecentActivity[]>(`${API_CONFIG.ENDPOINTS.DASHBOARD}recent-activities`);
       if (response.error) {
         throw new Error(response.error);
       }

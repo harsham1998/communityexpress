@@ -13,11 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { theme } from '../../theme';
-import { DashboardService, DashboardStats, CommunityStats, OrderTrend } from '../../services/dashboard';
+import { useAuth } from '../../context/AuthContext';
+import { DashboardService, DashboardStats, OrderTrend } from '../../services/dashboard';
+import { CommunityStats } from '../../services/communities';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const DashboardScreen = ({ navigation }: any) => {
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [communities, setCommunities] = useState<CommunityStats[]>([]);
   const [orderTrends, setOrderTrends] = useState<OrderTrend[]>([]);
@@ -25,8 +28,15 @@ const DashboardScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    // Only load dashboard data when auth is complete and user is available
+    if (!authLoading && user) {
+      console.log('👤 User authenticated, loading dashboard...');
+      loadDashboardData();
+    } else if (!authLoading && !user) {
+      console.log('❌ No authenticated user found');
+      setLoading(false);
+    }
+  }, [authLoading, user]);
 
   const loadDashboardData = async () => {
     try {
@@ -371,14 +381,14 @@ const styles = StyleSheet.create({
   
   statValue: {
     fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
+    fontWeight: '700' as const,
     color: theme.colors.text.primary,
   },
   
   statTitle: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500' as const,
   },
   
   statSubtitle: {
@@ -407,12 +417,12 @@ const styles = StyleSheet.create({
   revenueTitle: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500' as const,
   },
   
   revenueValue: {
     fontSize: theme.typography.fontSize['3xl'],
-    fontWeight: theme.typography.fontWeight.bold,
+    fontWeight: '700' as const,
     color: theme.colors.text.primary,
     marginTop: theme.spacing[1],
   },
@@ -429,7 +439,7 @@ const styles = StyleSheet.create({
   revenueSubtitle: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.success[600],
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500' as const,
   },
   
   quickStats: {
@@ -444,7 +454,7 @@ const styles = StyleSheet.create({
   
   quickStatValue: {
     fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
+    fontWeight: '700' as const,
     color: theme.colors.text.primary,
   },
   
@@ -458,7 +468,7 @@ const styles = StyleSheet.create({
   quickStatChange: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.success[600],
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500' as const,
     marginTop: theme.spacing[1],
   },
   
@@ -468,7 +478,7 @@ const styles = StyleSheet.create({
   
   chartTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontWeight: '600' as const,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing[4],
   },
@@ -491,14 +501,14 @@ const styles = StyleSheet.create({
   
   communitiesTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontWeight: '600' as const,
     color: theme.colors.text.primary,
   },
   
   viewAllButton: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary[600],
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500' as const,
   },
   
   communityItem: {
@@ -516,7 +526,7 @@ const styles = StyleSheet.create({
   
   communityName: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500' as const,
     color: theme.colors.text.primary,
   },
   
@@ -532,7 +542,7 @@ const styles = StyleSheet.create({
   
   communityRevenueValue: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.bold,
+    fontWeight: '700' as const,
     color: theme.colors.text.primary,
   },
   
@@ -547,7 +557,7 @@ const styles = StyleSheet.create({
   communityRankText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.primary[600],
-    fontWeight: theme.typography.fontWeight.bold,
+    fontWeight: '700' as const,
   },
   
   actionsCard: {
@@ -556,7 +566,7 @@ const styles = StyleSheet.create({
   
   actionsTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontWeight: '600' as const,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing[4],
   },
@@ -582,7 +592,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.primary,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500' as const,
     textAlign: 'center',
     marginTop: theme.spacing[2],
   },

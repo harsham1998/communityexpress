@@ -15,6 +15,7 @@ import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { theme } from '../../theme';
+import { useAuth } from '../../context/AuthContext';
 import { 
   CommunitiesService, 
   Community as ApiCommunity, 
@@ -39,6 +40,7 @@ interface Community {
 }
 
 const CommunitiesScreen = () => {
+  const { user, loading: authLoading } = useAuth();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,8 +58,15 @@ const CommunitiesScreen = () => {
   });
 
   useEffect(() => {
-    loadCommunities();
-  }, []);
+    // Only load communities when auth is complete and user is available
+    if (!authLoading && user) {
+      console.log('👤 User authenticated, loading communities...');
+      loadCommunities();
+    } else if (!authLoading && !user) {
+      console.log('❌ No authenticated user found');
+      setLoading(false);
+    }
+  }, [authLoading, user]);
 
   const loadCommunities = async () => {
     try {

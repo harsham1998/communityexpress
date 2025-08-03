@@ -8,12 +8,14 @@ export const API_CONFIG = {
       ME: '/auth/me',
       JOIN_COMMUNITY: '/auth/join-community',
     },
-    VENDORS: '/vendors',
-    PRODUCTS: '/products',
-    ORDERS: '/orders',
-    PAYMENTS: '/payments',
+    COMMUNITIES: '/communities/',
+    VENDORS: '/vendors/',
+    PRODUCTS: '/products/',
+    ORDERS: '/orders/',
+    PAYMENTS: '/payments/',
+    DASHBOARD: '/dashboard/',
   },
-  TIMEOUT: 10000, // 10 seconds
+  TIMEOUT: 60000, // 60 seconds for Render.com free tier
 };
 
 // Helper function to build full API URLs

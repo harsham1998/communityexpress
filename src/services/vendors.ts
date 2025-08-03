@@ -1,4 +1,5 @@
 import ApiService from './api';
+import { API_CONFIG } from '../config/api';
 
 export type VendorType = 'milk' | 'laundry' | 'food' | 'cleaning';
 
@@ -48,7 +49,7 @@ export interface UpdateVendorRequest extends CreateVendorRequest {
 export class VendorsService {
   static async getAllVendors(): Promise<Vendor[]> {
     try {
-      const response = await ApiService.get<Vendor[]>('/vendors');
+      const response = await ApiService.get<Vendor[]>(API_CONFIG.ENDPOINTS.VENDORS);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -87,8 +88,8 @@ export class VendorsService {
 
   static async getVendorsByType(type: VendorType): Promise<Vendor[]> {
     try {
-      const response = await ApiService.get(`/vendors/type/${type}`);
-      return response.data;
+      const response = await ApiService.get<Vendor[]>(`${API_CONFIG.ENDPOINTS.VENDORS}type/${type}`);
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching vendors by type:', error);
       throw error;
@@ -97,7 +98,7 @@ export class VendorsService {
 
   static async createVendor(vendorData: CreateVendorRequest): Promise<Vendor> {
     try {
-      const response = await ApiService.post<Vendor>('/vendors', vendorData);
+      const response = await ApiService.post<Vendor>(API_CONFIG.ENDPOINTS.VENDORS, vendorData);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -148,7 +149,7 @@ export class VendorsService {
 
   static async getVendorStats(): Promise<VendorStats[]> {
     try {
-      const response = await ApiService.get<VendorStats[]>('/vendors/stats');
+      const response = await ApiService.get<VendorStats[]>(`${API_CONFIG.ENDPOINTS.VENDORS}stats`);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -161,12 +162,12 @@ export class VendorsService {
 
   static async searchVendors(query: string, type?: VendorType): Promise<Vendor[]> {
     try {
-      let url = `/vendors/search?q=${encodeURIComponent(query)}`;
+      let url = `${API_CONFIG.ENDPOINTS.VENDORS}search?q=${encodeURIComponent(query)}`;
       if (type) {
         url += `&type=${type}`;
       }
-      const response = await ApiService.get(url);
-      return response.data;
+      const response = await ApiService.get<Vendor[]>(url);
+      return response.data || [];
     } catch (error) {
       console.error('Error searching vendors:', error);
       throw error;
@@ -175,10 +176,10 @@ export class VendorsService {
 
   static async updateVendorRating(id: string, rating: number): Promise<Vendor> {
     try {
-      const response = await ApiService.patch(`/vendors/${id}/rating`, {
+      const response = await ApiService.patch<Vendor>(`${API_CONFIG.ENDPOINTS.VENDORS}${id}/rating`, {
         rating
       });
-      return response.data;
+      return response.data!;
     } catch (error) {
       console.error('Error updating vendor rating:', error);
       throw error;

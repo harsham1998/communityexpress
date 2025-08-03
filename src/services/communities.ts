@@ -1,4 +1,5 @@
 import ApiService from './api';
+import { API_CONFIG } from '../config/api';
 
 export interface Community {
   id: string;
@@ -37,10 +38,33 @@ export interface UpdateCommunityRequest extends CreateCommunityRequest {
 export class CommunitiesService {
   static async getAllCommunities(): Promise<Community[]> {
     try {
-      const response = await ApiService.get<Community[]>('/communities');
+      console.log('🏘️  Fetching communities...');
+      
+      // Add a small delay to ensure token is stored
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const response = await ApiService.get<Community[]>(API_CONFIG.ENDPOINTS.COMMUNITIES);
+      console.log('📡 Communities API response:', response);
+      
       if (response.error) {
+        console.error('❌ Communities API error:', response.error);
+        
+        // If authentication error, try once more after a delay
+        if (response.error.toLowerCase().includes('not authenticated') || response.status === 401) {
+          console.log('🔄 Retrying communities request after authentication error...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const retryResponse = await ApiService.get<Community[]>(API_CONFIG.ENDPOINTS.COMMUNITIES);
+          if (retryResponse.error) {
+            throw new Error(retryResponse.error);
+          }
+          return retryResponse.data || [];
+        }
+        
         throw new Error(response.error);
       }
+      
+      console.log('✅ Communities loaded successfully:', response.data?.length, 'communities');
       return response.data || [];
     } catch (error) {
       console.error('Error fetching communities:', error);
@@ -50,7 +74,7 @@ export class CommunitiesService {
 
   static async getCommunityById(id: string): Promise<Community> {
     try {
-      const response = await ApiService.get<Community>(`/communities/${id}`);
+      const response = await ApiService.get<Community>(`${API_CONFIG.ENDPOINTS.COMMUNITIES}${id}`);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -63,7 +87,7 @@ export class CommunitiesService {
 
   static async createCommunity(communityData: CreateCommunityRequest): Promise<Community> {
     try {
-      const response = await ApiService.post<Community>('/communities', communityData);
+      const response = await ApiService.post<Community>(API_CONFIG.ENDPOINTS.COMMUNITIES, communityData);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -77,7 +101,7 @@ export class CommunitiesService {
   static async updateCommunity(communityData: UpdateCommunityRequest): Promise<Community> {
     try {
       const { id, ...data } = communityData;
-      const response = await ApiService.put<Community>(`/communities/${id}`, data);
+            const response = await ApiService.put<Community>(`${API_CONFIG.ENDPOINTS.COMMUNITIES}${id}`, communityData);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -90,7 +114,7 @@ export class CommunitiesService {
 
   static async deleteCommunity(id: string): Promise<void> {
     try {
-      const response = await ApiService.delete(`/communities/${id}`);
+      const response = await ApiService.delete(`${API_CONFIG.ENDPOINTS.COMMUNITIES}${id}`);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -102,7 +126,7 @@ export class CommunitiesService {
 
   static async toggleCommunityStatus(id: string, isActive: boolean): Promise<Community> {
     try {
-      const response = await ApiService.patch<Community>(`/communities/${id}/status`, {
+      const response = await ApiService.patch<Community>(`${API_CONFIG.ENDPOINTS.COMMUNITIES}${id}/status`, {
         is_active: isActive
       });
       if (response.error) {
@@ -117,7 +141,7 @@ export class CommunitiesService {
 
   static async getCommunityStats(): Promise<CommunityStats[]> {
     try {
-      const response = await ApiService.get<CommunityStats[]>('/communities/stats');
+      const response = await ApiService.get<CommunityStats[]>(`${API_CONFIG.ENDPOINTS.COMMUNITIES}stats`);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -130,7 +154,7 @@ export class CommunitiesService {
 
   static async searchCommunities(query: string): Promise<Community[]> {
     try {
-      const response = await ApiService.get<Community[]>(`/communities/search?q=${encodeURIComponent(query)}`);
+      const response = await ApiService.get<Community[]>(`${API_CONFIG.ENDPOINTS.COMMUNITIES}search?q=${encodeURIComponent(query)}`);
       if (response.error) {
         throw new Error(response.error);
       }

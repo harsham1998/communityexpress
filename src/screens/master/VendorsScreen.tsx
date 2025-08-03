@@ -18,29 +18,11 @@ import { Input } from '../../components/ui/Input';
 import { theme } from '../../theme';
 import { 
   VendorsService, 
-  Vendor as ApiVendor, 
+  Vendor, 
   VendorType, 
   CreateVendorRequest, 
   UpdateVendorRequest 
 } from '../../services/vendors';
-
-interface Vendor {
-  id: string;
-  name: string;
-  type: VendorType;
-  email: string;
-  phone: string;
-  address: string;
-  communityId: string;
-  communityName: string;
-  isActive: boolean;
-  rating: number;
-  totalOrders: number;
-  monthlyRevenue: number;
-  description: string;
-  createdAt: string;
-  lastActive: string;
-}
 
 const VendorsScreen = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -63,10 +45,10 @@ const VendorsScreen = () => {
   });
 
   const vendorTypeColors = {
-    milk: theme.colors.blue[600],
-    laundry: theme.colors.purple[600],
-    food: theme.colors.orange[600],
-    cleaning: theme.colors.green[600],
+    milk: theme.colors.primary[600],
+    laundry: theme.colors.secondary[600],
+    food: theme.colors.warning[600],
+    cleaning: theme.colors.success[600],
   };
 
   const vendorTypeIcons = {
@@ -83,27 +65,7 @@ const VendorsScreen = () => {
   const loadVendors = async () => {
     try {
       const apiVendors = await VendorsService.getAllVendors();
-      
-      // Transform API data to match our UI interface
-      const transformedVendors: Vendor[] = apiVendors.map(apiVendor => ({
-        id: apiVendor.id,
-        name: apiVendor.name,
-        type: apiVendor.type,
-        email: apiVendor.email,
-        phone: apiVendor.phone,
-        address: apiVendor.address,
-        communityId: apiVendor.community_id,
-        communityName: apiVendor.community_name || 'Unknown',
-        isActive: apiVendor.is_active,
-        rating: apiVendor.rating,
-        totalOrders: apiVendor.total_orders,
-        monthlyRevenue: apiVendor.monthly_revenue,
-        description: apiVendor.description,
-        createdAt: apiVendor.created_at,
-        lastActive: apiVendor.last_active,
-      }));
-
-      setVendors(transformedVendors);
+      setVendors(apiVendors);
     } catch (error) {
       console.error('Error loading vendors:', error);
       Alert.alert('Error', 'Failed to load vendors');
@@ -121,7 +83,7 @@ const VendorsScreen = () => {
   const filteredVendors = vendors.filter(vendor => {
     const matchesSearch = vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       vendor.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.communityName.toLowerCase().includes(searchQuery.toLowerCase());
+      vendor.community_name?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesType = filterType === 'all' || vendor.type === filterType;
     
@@ -149,7 +111,7 @@ const VendorsScreen = () => {
       email: vendor.email,
       phone: vendor.phone,
       address: vendor.address,
-      communityId: vendor.communityId,
+      communityId: vendor.community_id,
       description: vendor.description,
     });
     setSelectedVendor(vendor);
@@ -197,12 +159,12 @@ const VendorsScreen = () => {
 
   const handleToggleStatus = async (vendor: Vendor) => {
     try {
-      const newStatus = !vendor.isActive;
+      const newStatus = !vendor.is_active;
       await VendorsService.toggleVendorStatus(vendor.id, newStatus);
       
       Alert.alert(
         'Success',
-        `Vendor ${vendor.isActive ? 'deactivated' : 'activated'} successfully`
+        `Vendor ${vendor.is_active ? 'deactivated' : 'activated'} successfully`
       );
       
       loadVendors(); // Reload the list
@@ -248,19 +210,19 @@ const VendorsScreen = () => {
                 </View>
                 <View style={[
                   styles.statusBadge,
-                  { backgroundColor: vendor.isActive ? theme.colors.success[100] : theme.colors.error[100] }
+                  { backgroundColor: vendor.is_active ? theme.colors.success[100] : theme.colors.error[100] }
                 ]}>
                   <Text style={[
                     styles.statusText,
-                    { color: vendor.isActive ? theme.colors.success[600] : theme.colors.error[600] }
+                    { color: vendor.is_active ? theme.colors.success[600] : theme.colors.error[600] }
                   ]}>
-                    {vendor.isActive ? 'Active' : 'Inactive'}
+                    {vendor.is_active ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
               </View>
             </View>
           </View>
-          <Text style={styles.communityName}>{vendor.communityName}</Text>
+          <Text style={styles.communityName}>{vendor.community_name || 'Unknown'}</Text>
           <Text style={styles.vendorDescription}>{vendor.description}</Text>
         </View>
         
@@ -276,9 +238,9 @@ const VendorsScreen = () => {
             onPress={() => handleToggleStatus(vendor)}
           >
             <Ionicons
-              name={vendor.isActive ? "pause-circle-outline" : "play-circle-outline"}
+              name={vendor.is_active ? "pause-circle-outline" : "play-circle-outline"}
               size={20}
-              color={vendor.isActive ? theme.colors.warning[600] : theme.colors.success[600]}
+              color={vendor.is_active ? theme.colors.warning[600] : theme.colors.success[600]}
             />
           </TouchableOpacity>
         </View>
@@ -290,11 +252,11 @@ const VendorsScreen = () => {
           <Text style={styles.statLabel}>Rating</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{vendor.totalOrders}</Text>
+          <Text style={styles.statValue}>{vendor.total_orders}</Text>
           <Text style={styles.statLabel}>Orders</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatCurrency(vendor.monthlyRevenue)}</Text>
+          <Text style={styles.statValue}>{formatCurrency(vendor.monthly_revenue)}</Text>
           <Text style={styles.statLabel}>Revenue</Text>
         </View>
       </View>
@@ -392,7 +354,7 @@ const VendorsScreen = () => {
               <Text style={styles.summaryLabel}>Total</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{vendors.filter(v => v.isActive).length}</Text>
+              <Text style={styles.summaryValue}>{vendors.filter(v => v.is_active).length}</Text>
               <Text style={styles.summaryLabel}>Active</Text>
             </View>
             <View style={styles.summaryItem}>
@@ -403,7 +365,7 @@ const VendorsScreen = () => {
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>
-                {formatCurrency(vendors.reduce((sum, v) => sum + v.monthlyRevenue, 0))}
+                {formatCurrency(vendors.reduce((sum, v) => sum + v.monthly_revenue, 0))}
               </Text>
               <Text style={styles.summaryLabel}>Revenue</Text>
             </View>

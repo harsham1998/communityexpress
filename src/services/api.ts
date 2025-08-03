@@ -15,7 +15,7 @@ class ApiService {
       const url = buildApiUrl(endpoint);
       console.log('API Request:', url, options);
       
-      const defaultHeaders = {
+      const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
@@ -63,18 +63,18 @@ class ApiService {
         data,
         status: response.status,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('API Request Error:', error);
       
-      if (error.name === 'AbortError') {
+      if (error?.name === 'AbortError') {
         return {
-          error: 'Request timeout',
+          error: 'Request timeout - server may be starting up. Please try again in a moment.',
           status: 0,
         };
       }
       
       return {
-        error: error instanceof Error ? error.message : 'Network error',
+        error: error instanceof Error ? error.message : 'Network error - please check your connection',
         status: 0,
       };
     }
@@ -83,7 +83,9 @@ class ApiService {
   private static async getAuthToken(): Promise<string | null> {
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      return await AsyncStorage.getItem('auth_token');
+      const token = await AsyncStorage.getItem('auth_token');
+      console.log('🔑 Getting auth token:', token ? `Token exists (${token.substring(0, 20)}...)` : 'No token found');
+      return token;
     } catch (error) {
       console.error('Error getting auth token:', error);
       return null;

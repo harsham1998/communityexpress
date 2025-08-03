@@ -6,6 +6,24 @@ export interface AuthUser extends User {
   session?: any;
 }
 
+interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    role: UserRole;
+    community_id?: string;
+    apartment_number?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
 export class AuthService {
   static async signIn(email: string, password: string): Promise<AuthUser | null> {
     try {
@@ -16,10 +34,14 @@ export class AuthService {
       }
 
       if (response.data) {
-        const { access_token, user } = response.data;
+        const loginData = response.data as LoginResponse;
+        const { access_token, user } = loginData;
+        
+        console.log('🔐 Login successful, storing token...');
         
         // Store token
         await AsyncStorage.setItem('auth_token', access_token);
+        console.log('✅ Token stored successfully');
         
         // Store user data
         const authUser: AuthUser = {
@@ -73,14 +95,19 @@ export class AuthService {
       }
 
       if (response.data) {
-        const user = response.data;
+        // For signUp, the response might just be the user data directly, not wrapped with access_token
+        const userData = response.data as any; // Use any for now since we don't know the exact structure
+        
+        // Check if it's a login-style response or direct user data
+        const user = userData.user || userData;
+        
         const authUser: AuthUser = {
           id: user.id,
           email: user.email,
           firstName: user.first_name,
           lastName: user.last_name,
           phone: user.phone,
-          role: user.role,
+          role: user.role as UserRole,
           communityId: user.community_id,
           apartmentNumber: user.apartment_number,
           isActive: user.is_active,
@@ -125,19 +152,19 @@ export class AuthService {
       }
 
       if (response.data) {
-        const user = response.data;
+        const userData = response.data as LoginResponse['user'];
         const authUser: AuthUser = {
-          id: user.id,
-          email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          phone: user.phone,
-          role: user.role,
-          communityId: user.community_id,
-          apartmentNumber: user.apartment_number,
-          isActive: user.is_active,
-          createdAt: user.created_at,
-          updatedAt: user.updated_at,
+          id: userData.id,
+          email: userData.email,
+          firstName: userData.first_name,
+          lastName: userData.last_name,
+          phone: userData.phone,
+          role: userData.role,
+          communityId: userData.community_id,
+          apartmentNumber: userData.apartment_number,
+          isActive: userData.is_active,
+          createdAt: userData.created_at,
+          updatedAt: userData.updated_at,
         };
         
         await AsyncStorage.setItem('user', JSON.stringify(authUser));
