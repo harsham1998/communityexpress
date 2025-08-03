@@ -11,7 +11,6 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -23,15 +22,19 @@ import {
   CreateVendorRequest, 
   UpdateVendorRequest 
 } from '../../services/vendors';
+import { CommunitiesService, Community } from '../../services/communities';
 
 const VendorsScreen = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<VendorType | 'all'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [showCommunityDropdown, setShowCommunityDropdown] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -40,7 +43,7 @@ const VendorsScreen = () => {
     email: '',
     phone: '',
     address: '',
-    communityId: '1',
+    communityId: '',
     description: '',
   });
 
@@ -60,6 +63,7 @@ const VendorsScreen = () => {
 
   useEffect(() => {
     loadVendors();
+    loadCommunities();
   }, []);
 
   const loadVendors = async () => {
@@ -72,6 +76,16 @@ const VendorsScreen = () => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const loadCommunities = async () => {
+    try {
+      const apiCommunities = await CommunitiesService.getAllCommunities();
+      setCommunities(apiCommunities);
+    } catch (error) {
+      console.error('Error loading communities:', error);
+      Alert.alert('Error', 'Failed to load communities');
     }
   };
 
@@ -97,7 +111,7 @@ const VendorsScreen = () => {
       email: '',
       phone: '',
       address: '',
-      communityId: '1',
+      communityId: communities.length > 0 ? communities[0].id : '',
       description: '',
     });
     setSelectedVendor(null);
@@ -150,6 +164,8 @@ const VendorsScreen = () => {
       }
       
       setShowAddModal(false);
+      setShowTypeDropdown(false);
+      setShowCommunityDropdown(false);
       loadVendors(); // Reload the list
     } catch (error) {
       console.error('Error saving vendor:', error);
@@ -248,15 +264,15 @@ const VendorsScreen = () => {
 
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{vendor.rating.toFixed(1)}</Text>
+          <Text style={styles.statValue}>{(vendor.rating || 0).toFixed(1)}</Text>
           <Text style={styles.statLabel}>Rating</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{vendor.total_orders}</Text>
+          <Text style={styles.statValue}>{vendor.total_orders || 0}</Text>
           <Text style={styles.statLabel}>Orders</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatCurrency(vendor.monthly_revenue)}</Text>
+          <Text style={styles.statValue}>{formatCurrency(vendor.monthly_revenue || 0)}</Text>
           <Text style={styles.statLabel}>Revenue</Text>
         </View>
       </View>
@@ -359,13 +375,13 @@ const VendorsScreen = () => {
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>
-                {(vendors.reduce((sum, v) => sum + v.rating, 0) / vendors.length).toFixed(1)}
+                {vendors.length > 0 ? (vendors.reduce((sum, v) => sum + (v.rating || 0), 0) / vendors.length).toFixed(1) : '0.0'}
               </Text>
               <Text style={styles.summaryLabel}>Avg Rating</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>
-                {formatCurrency(vendors.reduce((sum, v) => sum + v.monthly_revenue, 0))}
+                {formatCurrency(vendors.reduce((sum, v) => sum + (v.monthly_revenue || 0), 0))}
               </Text>
               <Text style={styles.summaryLabel}>Revenue</Text>
             </View>
@@ -401,11 +417,19 @@ const VendorsScreen = () => {
         visible={showAddModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowAddModal(false)}
+        onRequestClose={() => {
+          setShowAddModal(false);
+          setShowTypeDropdown(false);
+          setShowCommunityDropdown(false);
+        }}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+            <TouchableOpacity onPress={() => {
+              setShowAddModal(false);
+              setShowTypeDropdown(false);
+              setShowCommunityDropdown(false);
+            }}>
               <Text style={styles.modalCancelButton}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
@@ -427,17 +451,73 @@ const VendorsScreen = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Vendor Type *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={formData.type}
-                  onValueChange={(value) => setFormData({ ...formData, type: value })}
-                  style={styles.picker}
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setShowTypeDropdown(!showTypeDropdown)}
                 >
-                  <Picker.Item label="Food Delivery" value="food" />
-                  <Picker.Item label="Milk Delivery" value="milk" />
-                  <Picker.Item label="Laundry Service" value="laundry" />
-                  <Picker.Item label="Cleaning Service" value="cleaning" />
-                </Picker>
+                  <View style={styles.dropdownContent}>
+                    <Ionicons
+                      name={vendorTypeIcons[formData.type]}
+                      size={20}
+                      color={vendorTypeColors[formData.type]}
+                      style={styles.dropdownIcon}
+                    />
+                    <Text style={styles.dropdownText}>
+                      {formData.type === 'food' && 'Food Delivery'}
+                      {formData.type === 'milk' && 'Milk Delivery'}
+                      {formData.type === 'laundry' && 'Laundry Service'}
+                      {formData.type === 'cleaning' && 'Cleaning Service'}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={showTypeDropdown ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color={theme.colors.gray[400]}
+                  />
+                </TouchableOpacity>
+                
+                {showTypeDropdown && (
+                  <ScrollView 
+                    style={styles.dropdownOptions}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                    keyboardShouldPersistTaps="always"
+                  >
+                    {([
+                      { value: 'food', label: 'Food Delivery' },
+                      { value: 'milk', label: 'Milk Delivery' },
+                      { value: 'laundry', label: 'Laundry Service' },
+                      { value: 'cleaning', label: 'Cleaning Service' }
+                    ] as const).map(option => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.dropdownOption,
+                          formData.type === option.value && styles.dropdownOptionSelected
+                        ]}
+                        onPress={() => {
+                          setFormData({ ...formData, type: option.value });
+                          setShowTypeDropdown(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={vendorTypeIcons[option.value]}
+                          size={20}
+                          color={vendorTypeColors[option.value]}
+                          style={styles.dropdownIcon}
+                        />
+                        <Text style={[
+                          styles.dropdownOptionText,
+                          formData.type === option.value && styles.dropdownOptionTextSelected
+                        ]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
               </View>
             </View>
 
@@ -471,18 +551,65 @@ const VendorsScreen = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Community *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={formData.communityId}
-                  onValueChange={(value) => setFormData({ ...formData, communityId: value })}
-                  style={styles.picker}
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setShowCommunityDropdown(!showCommunityDropdown)}
                 >
-                  <Picker.Item label="Sunrise Apartments" value="1" />
-                  <Picker.Item label="Green Valley" value="2" />
-                  <Picker.Item label="Ocean View" value="3" />
-                  <Picker.Item label="Mountain Ridge" value="4" />
-                  <Picker.Item label="City Center Plaza" value="5" />
-                </Picker>
+                  <View style={styles.dropdownContent}>
+                    <Ionicons
+                      name="home-outline"
+                      size={20}
+                      color={theme.colors.primary[600]}
+                      style={styles.dropdownIcon}
+                    />
+                    <Text style={styles.dropdownText}>
+                      {communities.find(c => c.id === formData.communityId)?.name || 'Select Community'}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={showCommunityDropdown ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color={theme.colors.gray[400]}
+                  />
+                </TouchableOpacity>
+                
+                {showCommunityDropdown && (
+                  <ScrollView 
+                    style={styles.dropdownOptions}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                    keyboardShouldPersistTaps="always"
+                  >
+                    {communities.map(community => (
+                      <TouchableOpacity
+                        key={community.id}
+                        style={[
+                          styles.dropdownOption,
+                          formData.communityId === community.id && styles.dropdownOptionSelected
+                        ]}
+                        onPress={() => {
+                          setFormData({ ...formData, communityId: community.id });
+                          setShowCommunityDropdown(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name="home-outline"
+                          size={20}
+                          color={theme.colors.primary[600]}
+                          style={styles.dropdownIcon}
+                        />
+                        <Text style={[
+                          styles.dropdownOptionText,
+                          formData.communityId === community.id && styles.dropdownOptionTextSelected
+                        ]}>
+                          {community.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
               </View>
             </View>
 
@@ -848,6 +975,82 @@ const styles = StyleSheet.create({
   
   picker: {
     height: 44,
+  },
+
+  // Custom dropdown styles
+  dropdownContainer: {
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    paddingHorizontal: theme.spacing[4],
+    paddingVertical: theme.spacing[3],
+    minHeight: 44,
+  },
+
+  dropdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  dropdownIcon: {
+    marginRight: theme.spacing[3],
+  },
+
+  dropdownText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+
+  dropdownOptions: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    marginTop: theme.spacing[1],
+    maxHeight: 200,
+    shadowColor: theme.colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing[4],
+    paddingVertical: theme.spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
+  },
+
+  dropdownOptionSelected: {
+    backgroundColor: theme.colors.primary[50],
+  },
+
+  dropdownOptionText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+
+  dropdownOptionTextSelected: {
+    color: theme.colors.primary[600],
+    fontWeight: theme.typography.fontWeight.medium as any,
   },
 });
 
