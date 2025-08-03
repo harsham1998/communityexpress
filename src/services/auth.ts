@@ -1,6 +1,6 @@
-import { supabase } from '../config/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, UserRole } from '../types';
+import ApiService from './api';
 
 export interface AuthUser extends User {
   session?: any;
@@ -9,16 +9,35 @@ export interface AuthUser extends User {
 export class AuthService {
   static async signIn(email: string, password: string): Promise<AuthUser | null> {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const response = await ApiService.login(email, password);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
-      if (error) throw error;
-
-      if (data.user) {
-        const userProfile = await this.getUserProfile(data.user.id);
-        return userProfile;
+      if (response.data) {
+        const { access_token, user } = response.data;
+        
+        // Store token
+        await AsyncStorage.setItem('auth_token', access_token);
+        
+        // Store user data
+        const authUser: AuthUser = {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          role: user.role,
+          communityId: user.community_id,
+          apartmentNumber: user.apartment_number,
+          isActive: user.is_active,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+        };
+        
+        await AsyncStorage.setItem('user', JSON.stringify(authUser));
+        return authUser;
       }
 
       return null;
@@ -38,43 +57,39 @@ export class AuthService {
     apartmentNumber?: string
   ): Promise<AuthUser | null> {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const userData = {
         email,
         password,
-      });
+        first_name: firstName,
+        last_name: lastName,
+        phone,
+        apartment_number: apartmentNumber,
+      };
 
-      if (error) throw error;
+      const response = await ApiService.register(userData);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
-      if (data.user) {
-        let communityId = null;
+      if (response.data) {
+        const user = response.data;
+        const authUser: AuthUser = {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          role: user.role,
+          communityId: user.community_id,
+          apartmentNumber: user.apartment_number,
+          isActive: user.is_active,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+        };
         
-        if (communityCode) {
-          const { data: community } = await supabase
-            .from('communities')
-            .select('id')
-            .eq('code', communityCode)
-            .single();
-          
-          communityId = community?.id;
-        }
-
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            phone,
-            community_id: communityId,
-            apartment_number: apartmentNumber,
-            role: 'user',
-          });
-
-        if (profileError) throw profileError;
-
-        const userProfile = await this.getUserProfile(data.user.id);
-        return userProfile;
+        await AsyncStorage.setItem('user', JSON.stringify(authUser));
+        return authUser;
       }
 
       return null;
@@ -86,7 +101,7 @@ export class AuthService {
 
   static async signOut(): Promise<void> {
     try {
-      await supabase.auth.signOut();
+      await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('user');
     } catch (error) {
       console.error('Sign out error:', error);
@@ -94,46 +109,42 @@ export class AuthService {
     }
   }
 
-  static async getUserProfile(userId: string): Promise<AuthUser | null> {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      const user: AuthUser = {
-        id: data.id,
-        email: data.email,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        phone: data.phone,
-        role: data.role,
-        communityId: data.community_id,
-        apartmentNumber: data.apartment_number,
-        isActive: data.is_active,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      };
-
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      return user;
-    } catch (error) {
-      console.error('Get user profile error:', error);
-      return null;
-    }
-  }
-
   static async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        return await this.getUserProfile(user.id);
+      const token = await AsyncStorage.getItem('auth_token');
+      if (!token) {
+        return null;
       }
 
+      const response = await ApiService.getCurrentUser();
+      
+      if (response.error) {
+        // Token might be expired, clear storage
+        await this.signOut();
+        return null;
+      }
+
+      if (response.data) {
+        const user = response.data;
+        const authUser: AuthUser = {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          role: user.role,
+          communityId: user.community_id,
+          apartmentNumber: user.apartment_number,
+          isActive: user.is_active,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+        };
+        
+        await AsyncStorage.setItem('user', JSON.stringify(authUser));
+        return authUser;
+      }
+
+      // Fallback to stored user data
       const storedUser = await AsyncStorage.getItem('user');
       return storedUser ? JSON.parse(storedUser) : null;
     } catch (error) {
@@ -142,29 +153,27 @@ export class AuthService {
     }
   }
 
-  static async joinCommunity(communityCode: string, userId: string): Promise<boolean> {
+  static async joinCommunity(communityCode: string): Promise<boolean> {
     try {
-      const { data: community } = await supabase
-        .from('communities')
-        .select('id')
-        .eq('code', communityCode)
-        .single();
-
-      if (!community) {
-        throw new Error('Invalid community code');
+      const response = await ApiService.joinCommunity(communityCode);
+      
+      if (response.error) {
+        throw new Error(response.error);
       }
-
-      const { error } = await supabase
-        .from('users')
-        .update({ community_id: community.id })
-        .eq('id', userId);
-
-      if (error) throw error;
 
       return true;
     } catch (error) {
       console.error('Join community error:', error);
       throw error;
+    }
+  }
+
+  static async getAuthToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem('auth_token');
+    } catch (error) {
+      console.error('Get auth token error:', error);
+      return null;
     }
   }
 }

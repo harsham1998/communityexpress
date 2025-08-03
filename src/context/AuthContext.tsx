@@ -111,9 +111,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!user) throw new Error('User not authenticated');
       
       setLoading(true);
-      await AuthService.joinCommunity(communityCode, user.id);
+      await AuthService.joinCommunity(communityCode);
       
-      const updatedUser = await AuthService.getUserProfile(user.id);
+      const updatedUser = await AuthService.getCurrentUser();
       setUser(updatedUser);
     } catch (error) {
       console.error('Join community error:', error);
