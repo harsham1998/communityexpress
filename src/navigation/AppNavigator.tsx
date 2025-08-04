@@ -2,17 +2,19 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { theme } from '../theme';
 
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import JoinCommunityScreen from '../screens/auth/JoinCommunityScreen';
 
 import UserHomeScreen from '../screens/user/HomeScreen';
-import VendorListScreen from '../screens/user/VendorListScreen';
+import UserVendorsScreen from '../screens/user/UserVendorsScreen';
 import ProductListScreen from '../screens/user/ProductListScreen';
 import OrderHistoryScreen from '../screens/user/OrderHistoryScreen';
-import ProfileScreen from '../screens/user/ProfileScreen';
+import UserProfileScreen from '../screens/user/UserProfileScreen';
 
 import AdminDashboardScreen from '../screens/admin/DashboardScreen';
 import AdminOrdersScreen from '../screens/admin/OrdersScreen';
@@ -39,25 +41,52 @@ const AuthStack = () => (
 );
 
 const UserTabs = () => (
-  <Tab.Navigator>
+  <Tab.Navigator 
+    screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarIcon: ({ focused, color, size }) => {
+        let iconName: keyof typeof Ionicons.glyphMap;
+
+        if (route.name === 'UserHome') {
+          iconName = focused ? 'home' : 'home-outline';
+        } else if (route.name === 'UserVendors') {
+          iconName = focused ? 'storefront' : 'storefront-outline';
+        } else if (route.name === 'OrderHistory') {
+          iconName = focused ? 'receipt' : 'receipt-outline';
+        } else if (route.name === 'UserProfile') {
+          iconName = focused ? 'person' : 'person-outline';
+        } else {
+          iconName = 'ellipse-outline';
+        }
+
+        return <Ionicons name={iconName} size={size} color={color} />;
+      },
+      tabBarActiveTintColor: theme.colors.primary[600],
+      tabBarInactiveTintColor: theme.colors.gray[400],
+      tabBarStyle: {
+        backgroundColor: theme.colors.white,
+        borderTopColor: theme.colors.border.light,
+      },
+    })}
+  >
     <Tab.Screen 
-      name="Home" 
+      name="UserHome" 
       component={UserHomeScreen}
       options={{ title: 'Home' }}
     />
     <Tab.Screen 
-      name="Vendors" 
-      component={VendorListScreen}
-      options={{ title: 'Services' }}
+      name="UserVendors" 
+      component={UserVendorsScreen}
+      options={{ title: 'Vendors' }}
     />
     <Tab.Screen 
-      name="Orders" 
+      name="OrderHistory" 
       component={OrderHistoryScreen}
       options={{ title: 'Orders' }}
     />
     <Tab.Screen 
-      name="Profile" 
-      component={ProfileScreen}
+      name="UserProfile" 
+      component={UserProfileScreen}
       options={{ title: 'Profile' }}
     />
   </Tab.Navigator>
@@ -136,13 +165,15 @@ const MainStack = ({ userRole }: { userRole: UserRole }) => {
   }
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen 
         name="Main" 
         component={TabComponent} 
         options={{ headerShown: false }}
       />
       <Stack.Screen name="ProductList" component={ProductListScreen} />
+      <Stack.Screen name="VendorDetails" component={ProductListScreen} />
+      <Stack.Screen name="OrderDetails" component={ProductListScreen} />
     </Stack.Navigator>
   );
 };

@@ -15,6 +15,7 @@ interface AuthContextType {
     apartmentNumber?: string
   ) => Promise<void>;
   signOut: () => Promise<void>;
+  logout: () => Promise<void>;
   joinCommunity: (communityCode: string) => Promise<void>;
 }
 
@@ -129,6 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signUp,
     signOut,
+    logout: signOut, // Alias for signOut
     joinCommunity,
   };
 

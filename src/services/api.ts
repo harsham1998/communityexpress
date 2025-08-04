@@ -13,7 +13,6 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = buildApiUrl(endpoint);
-      console.log('API Request:', url, options);
       
       const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -41,13 +40,18 @@ class ApiService {
       const responseText = await response.text();
       
       let data;
+      if (responseText.trim() === '' || responseText === 'Internal Server Error' || responseText.includes('<!DOCTYPE html>')) {
+        return {
+          error: 'Server error',
+          status: response.status,
+        };
+      }
+      
       try {
         data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        console.error('Response Text:', responseText);
+      } catch {
         return {
-          error: `Invalid JSON response: ${responseText.substring(0, 100)}...`,
+          error: 'Server error', 
           status: response.status,
         };
       }
@@ -63,18 +67,16 @@ class ApiService {
         data,
         status: response.status,
       };
-    } catch (error: any) {
-      console.error('API Request Error:', error);
-      
+    } catch (error: any) {      
       if (error?.name === 'AbortError') {
         return {
-          error: 'Request timeout - server may be starting up. Please try again in a moment.',
+          error: 'Request timeout',
           status: 0,
         };
       }
       
       return {
-        error: error instanceof Error ? error.message : 'Network error - please check your connection',
+        error: 'Network error',
         status: 0,
       };
     }
@@ -84,10 +86,8 @@ class ApiService {
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const token = await AsyncStorage.getItem('auth_token');
-      console.log('🔑 Getting auth token:', token ? `Token exists (${token.substring(0, 20)}...)` : 'No token found');
       return token;
     } catch (error) {
-      console.error('Error getting auth token:', error);
       return null;
     }
   }
@@ -155,6 +155,12 @@ class ApiService {
 
   static async joinCommunity(communityCode: string) {
     return this.request(`${API_CONFIG.ENDPOINTS.AUTH.JOIN_COMMUNITY}?community_code=${communityCode}`, {
+      method: 'POST',
+    });
+  }
+
+  static async logout() {
+    return this.request(API_CONFIG.ENDPOINTS.AUTH.LOGOUT, {
       method: 'POST',
     });
   }

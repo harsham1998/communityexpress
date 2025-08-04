@@ -7,6 +7,7 @@ export const API_CONFIG = {
       REGISTER: '/auth/register',
       ME: '/auth/me',
       JOIN_COMMUNITY: '/auth/join-community',
+      LOGOUT: '/auth/logout',
     },
     COMMUNITIES: '/communities/',
     VENDORS: '/vendors/',
@@ -14,6 +15,7 @@ export const API_CONFIG = {
     ORDERS: '/orders/',
     PAYMENTS: '/payments/',
     DASHBOARD: '/dashboard/',
+    USERS: '/users/',
   },
   TIMEOUT: 60000, // 60 seconds for Render.com free tier
 };

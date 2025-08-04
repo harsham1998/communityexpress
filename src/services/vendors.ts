@@ -77,12 +77,12 @@ export class VendorsService {
     try {
       const response = await ApiService.get<Vendor[]>(`/vendors/community/${communityId}`);
       if (response.error) {
-        throw new Error(response.error);
+        return [];
       }
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching vendors by community:', error);
-      throw error;
+      // Return empty array silently to prevent app crashes
+      return [];
     }
   }
 
