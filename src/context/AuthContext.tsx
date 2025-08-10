@@ -17,6 +17,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   logout: () => Promise<void>;
   joinCommunity: (communityCode: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,7 +60,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(authUser);
     } catch (error) {
       console.error('Sign in error:', error);
-      throw error;
+      // Ensure error message is properly handled for UI display
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Login failed: ' + String(error));
+      }
     } finally {
       setLoading(false);
     }
@@ -124,6 +130,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -132,6 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     logout: signOut, // Alias for signOut
     joinCommunity,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

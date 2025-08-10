@@ -58,6 +58,12 @@ export class AuthService {
           updatedAt: user.updated_at,
         };
         
+        console.log('🏘️  User login - community mapping:', {
+          'server_community_id': user.community_id,
+          'mapped_communityId': authUser.communityId,
+          'user_email': user.email
+        });
+        
         await AsyncStorage.setItem('user', JSON.stringify(authUser));
         return authUser;
       }
@@ -65,7 +71,18 @@ export class AuthService {
       return null;
     } catch (error) {
       console.error('Sign in error:', error);
-      throw error;
+      // Ensure error message is properly stringified
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        throw new Error(error.message);
+      } else {
+        console.error('Non-Error object thrown:', error);
+        throw new Error('Login failed: ' + String(error));
+      }
     }
   }
 

@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.medium as any,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing[2],
   },

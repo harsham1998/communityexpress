@@ -153,6 +153,20 @@ class ApiService {
     return this.request(API_CONFIG.ENDPOINTS.AUTH.ME);
   }
 
+  static async updateUserCommunity(communityId: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.AUTH.ME}/community`, {
+      method: 'PUT',
+      body: JSON.stringify({ community_id: communityId }),
+    });
+  }
+
+  static async updateUserApartment(apartmentNumber: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.AUTH.ME}/apartment`, {
+      method: 'PUT',
+      body: JSON.stringify({ apartment_number: apartmentNumber }),
+    });
+  }
+
   static async joinCommunity(communityCode: string) {
     return this.request(`${API_CONFIG.ENDPOINTS.AUTH.JOIN_COMMUNITY}?community_code=${communityCode}`, {
       method: 'POST',

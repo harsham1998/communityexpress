@@ -1,4 +1,4 @@
-export type UserRole = 'master' | 'admin' | 'partner' | 'user';
+export type UserRole = 'master' | 'admin' | 'partner' | 'vendor' | 'user';
 export type VendorType = 'milk' | 'laundry' | 'food' | 'cleaning';
 export type OrderStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';

@@ -23,6 +23,10 @@ import AdminPartnersScreen from '../screens/admin/PartnersScreen';
 import PartnerOrdersScreen from '../screens/partner/OrdersScreen';
 import PartnerProfileScreen from '../screens/partner/ProfileScreen';
 
+import LaundryVendorDashboardScreen from '../screens/vendor/LaundryVendorDashboardScreen';
+import LaundryVendorOrdersScreen from '../screens/vendor/LaundryVendorOrdersScreen';
+import LaundryVendorItemsScreen from '../screens/vendor/LaundryVendorItemsScreen';
+
 import MasterDashboardScreen from '../screens/master/DashboardScreen';
 import MasterCommunitiesScreen from '../screens/master/CommunitiesScreen';
 import MasterVendorsScreen from '../screens/master/VendorsScreen';
@@ -127,6 +131,51 @@ const PartnerTabs = () => (
   </Tab.Navigator>
 );
 
+const VendorTabs = () => (
+  <Tab.Navigator 
+    screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarIcon: ({ focused, color, size }) => {
+        let iconName: keyof typeof Ionicons.glyphMap;
+
+        if (route.name === 'VendorDashboard') {
+          iconName = focused ? 'speedometer' : 'speedometer-outline';
+        } else if (route.name === 'VendorOrders') {
+          iconName = focused ? 'receipt' : 'receipt-outline';
+        } else if (route.name === 'VendorItems') {
+          iconName = focused ? 'list' : 'list-outline';
+        } else {
+          iconName = 'ellipse-outline';
+        }
+
+        return <Ionicons name={iconName} size={size} color={color} />;
+      },
+      tabBarActiveTintColor: theme.colors.primary[600],
+      tabBarInactiveTintColor: theme.colors.gray[400],
+      tabBarStyle: {
+        backgroundColor: theme.colors.white,
+        borderTopColor: theme.colors.border.light,
+      },
+    })}
+  >
+    <Tab.Screen 
+      name="VendorDashboard" 
+      component={LaundryVendorDashboardScreen}
+      options={{ title: 'Dashboard' }}
+    />
+    <Tab.Screen 
+      name="VendorOrders" 
+      component={LaundryVendorOrdersScreen}
+      options={{ title: 'Orders' }}
+    />
+    <Tab.Screen 
+      name="VendorItems" 
+      component={LaundryVendorItemsScreen}
+      options={{ title: 'Items' }}
+    />
+  </Tab.Navigator>
+);
+
 const MasterTabs = () => (
   <Tab.Navigator>
     <Tab.Screen 
@@ -159,6 +208,9 @@ const MainStack = ({ userRole }: { userRole: UserRole }) => {
       break;
     case 'partner':
       TabComponent = PartnerTabs;
+      break;
+    case 'vendor':
+      TabComponent = VendorTabs;
       break;
     default:
       TabComponent = UserTabs;

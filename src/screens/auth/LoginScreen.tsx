@@ -44,6 +44,11 @@ const LoginScreen = ({ navigation }: any) => {
     setPassword('Master123!');
   };
 
+  const fillVendorCredentials = () => {
+    setEmail('testlaundry1754390780@vendor.example.com');
+    setPassword('test');
+  };
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
@@ -113,6 +118,20 @@ const LoginScreen = ({ navigation }: any) => {
                 />
                 <Text style={styles.masterButtonText}>
                   Use Master Credentials
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.vendorButton}
+                onPress={fillVendorCredentials}
+              >
+                <Ionicons 
+                  name="storefront" 
+                  size={16} 
+                  color={theme.colors.green[600]} 
+                />
+                <Text style={styles.vendorButtonText}>
+                  Use Vendor Credentials (Test)
                 </Text>
               </TouchableOpacity>
             </View>
@@ -219,6 +238,26 @@ const styles = StyleSheet.create({
   masterButtonText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary[600],
+    fontWeight: theme.typography.fontWeight.medium as any,
+  },
+
+  vendorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing[3],
+    paddingHorizontal: theme.spacing[4],
+    backgroundColor: theme.colors.green[50],
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.green[200],
+    marginTop: theme.spacing[2],
+    gap: theme.spacing[2],
+  },
+  
+  vendorButtonText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.green[600],
     fontWeight: theme.typography.fontWeight.medium as any,
   },
   

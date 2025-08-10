@@ -14,12 +14,14 @@ import { theme } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import { VendorsService, Vendor } from '../../services/vendors';
 import { OrdersService, Order } from '../../services/orders';
+import { CommunitiesService, Community } from '../../services/communities';
 
 
 const UserHomeScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -33,6 +35,7 @@ const UserHomeScreen = ({ navigation }: any) => {
     if (!user.communityId) {
       setVendors([]);
       setRecentOrders([]);
+      setCommunity(null);
       setLoading(false);
       setRefreshing(false);
       return;
@@ -40,6 +43,14 @@ const UserHomeScreen = ({ navigation }: any) => {
     
     try {
       setLoading(true);
+      
+      // Load community information
+      try {
+        const communityData = await CommunitiesService.getCommunityById(user.communityId);
+        setCommunity(communityData);
+      } catch (communityError) {
+        setCommunity(null);
+      }
       
       // Load vendors for user's community
       try {
@@ -226,9 +237,14 @@ const UserHomeScreen = ({ navigation }: any) => {
           <View style={styles.welcomeHeader}>
             <View>
               <Text style={styles.welcomeTitle}>Welcome to</Text>
-              <Text style={styles.communityName}>Your Community</Text>
+              <Text style={styles.communityName}>
+                {community?.name || 'Your Community'}
+              </Text>
               {user?.apartmentNumber && (
                 <Text style={styles.apartmentNumber}>Apartment {user.apartmentNumber}</Text>
+              )}
+              {community?.community_code && (
+                <Text style={styles.communityCode}>Community Code: {community.community_code}</Text>
               )}
             </View>
             <View style={styles.welcomeIcon}>
@@ -379,6 +395,13 @@ const styles = StyleSheet.create({
   apartmentNumber: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary[600],
+    fontWeight: theme.typography.fontWeight.medium as any,
+    marginTop: theme.spacing[1],
+  },
+
+  communityCode: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
     fontWeight: theme.typography.fontWeight.medium as any,
     marginTop: theme.spacing[1],
   },

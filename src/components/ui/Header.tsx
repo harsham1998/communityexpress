@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   
   title: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
+    fontWeight: theme.typography.fontWeight.bold as any,
     color: theme.colors.text.primary,
   },
   
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   
   userName: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.medium as any,
     color: theme.colors.text.primary,
   },
   
